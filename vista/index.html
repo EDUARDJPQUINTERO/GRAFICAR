@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Analizador de Espectro</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --color1: #243757;
+      --color2: #3a5f6f;
+      --color3: #dad5b7;
+      --color4: #c2b79b;
+      --color5: #665e52;
+      --color6: #8b7355;
+      --color7: #4a7b9d;
+      --color8: #9d8b55;
+      --bg-dark: #1a1f2e;
+      --bg-card: #2a3245;
+      --text-light: #ffffff;
+      --text-muted: #e0e0e0;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, var(--bg-dark) 0%, #2a3245 100%);
+      color: var(--text-light);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+      padding: 25px;
+      background: var(--color1);
+      border-radius: 12px;
+      box-shadow: 0 8px 25px rgba(36, 55, 87, 0.4);
+      border: 1px solid var(--color7);
+    }
+
+    .header h1 {
+      color: var(--color3);
+      font-size: 2.8em;
+      margin-bottom: 8px;
+      font-weight: 300;
+      letter-spacing: 1px;
+    }
+
+    .header p {
+      color: var(--color4);
+      font-size: 1.1em;
+    }
+
+    .form-container {
+      background: var(--bg-card);
+      padding: 30px;
+      border-radius: 12px;
+      margin-bottom: 30px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+      border: 1px solid var(--color2);
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 25px;
+      margin-bottom: 25px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .form-group label {
+      color: var(--color3);
+      margin-bottom: 10px;
+      font-weight: 600;
+      font-size: 0.95em;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .form-group input {
+      padding: 14px 16px;
+      border: 2px solid var(--color2);
+      border-radius: 8px;
+      background: rgba(255,255,255,0.08);
+      color: var(--text-light);
+      font-size: 1em;
+      transition: all 0.3s ease;
+    }
+
+    .form-group input:focus {
+      outline: none;
+      border-color: var(--color7);
+      box-shadow: 0 0 0 3px rgba(74, 123, 157, 0.2);
+      background: rgba(255,255,255,0.12);
+    }
+
+    .buttons-container {
+      display: flex;
+      justify-content: flex-end;
+      gap: 15px;
+      margin: 25px 0;
+      flex-wrap: wrap;
+    }
+
+    .btn-generar {
+      background: linear-gradient(135deg, var(--color7) 0%, var(--color2) 100%);
+      color: white;
+      border: none;
+      padding: 14px 35px;
+      border-radius: 8px;
+      font-size: 1.1em;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px rgba(74, 123, 157, 0.4);
+      min-width: 200px;
+    }
+
+    .btn-generar:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(74, 123, 157, 0.6);
+    }
+
+    .btn-secundario {
+      background: linear-gradient(135deg, var(--color8) 0%, var(--color6) 100%);
+      color: white;
+      border: none;
+      padding: 14px 25px;
+      border-radius: 8px;
+      font-size: 1em;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 12px rgba(157, 139, 85, 0.3);
+      min-width: 160px;
+    }
+
+    .btn-secundario:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(157, 139, 85, 0.4);
+    }
+
+    .btn-eliminar {
+      background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 0.85em;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 2px 8px rgba(231, 76, 60, 0.3);
+    }
+
+    .btn-eliminar:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(231, 76, 60, 0.4);
+    }
+
+    .señal-item {
+      background: linear-gradient(135deg, rgba(58, 95, 111, 0.1) 0%, rgba(36, 55, 87, 0.1) 100%);
+      padding: 20px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      border: 1px solid var(--color2);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+
+    .señal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid var(--color2);
+    }
+
+    .señal-title {
+      color: var(--color3);
+      font-weight: 600;
+      font-size: 1.2em;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .señal-title::before {
+      font-size: 1.1em;
+    }
+
+    .chart-container {
+      background: var(--bg-card);
+      padding: 30px;
+      border-radius: 12px;
+      margin-bottom: 30px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+      border: 1px solid var(--color7);
+    }
+
+    .chart-title {
+      color: var(--color3);
+      margin-bottom: 25px;
+      text-align: center;
+      font-size: 1.6em;
+      font-weight: 300;
+    }
+
+    #espectroChart {
+      width: 100% !important;
+      height: 450px !important;
+    }
+
+    .results-container {
+      background: var(--bg-card);
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+      border: 1px solid var(--color8);
+    }
+
+    .results-title {
+      color: var(--color3);
+      margin-bottom: 20px;
+      font-size: 1.4em;
+      font-weight: 300;
+      text-align: center;
+    }
+
+    .results-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+      background: rgba(36, 55, 87, 0.2);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .results-table th {
+      background: linear-gradient(135deg, var(--color7) 0%, var(--color2) 100%);
+      color: var(--color3);
+      padding: 16px;
+      text-align: left;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-size: 0.9em;
+    }
+
+    .results-table td {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--color2);
+      color: var(--text-muted);
+    }
+
+    .results-table tr:hover {
+      background: rgba(74, 123, 157, 0.1);
+    }
+
+    .results-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .loading {
+      display: none;
+      text-align: center;
+      padding: 30px;
+    }
+
+    .loading-spinner {
+      border: 4px solid var(--color2);
+      border-top: 4px solid var(--color7);
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 15px;
+    }
+
+   
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <h1>Analizador de Espectro</h1>
+    </header>
+
+    <section class="form-container">
+      <form id="paramsForm">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Temperatura (K)</label>
+            <input type="number" step="any" name="temperatura" value="300" required>
+          </div>
+          <div class="form-group">
+            <label>Ancho de banda (MHz)</label>
+            <input type="number" step="any" name="ancho_banda" value="2.41" required>
+          </div>
+        </div>
+
+        <div id="señales-container">
+          <div class="señal-item" data-señal-id="1">
+            <div class="señal-header">
+              <span class="señal-title">
+                1 Señal
+              </span>
+              <button type="button" class="btn-eliminar" onclick="eliminarSeñal(1)">Eliminar</button>
+            </div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Frecuencia central (MHz)</label>
+                <input type="number" step="any" name="frecuencia_senal_1" required>
+              </div>
+              <div class="form-group">
+                <label>PIRE (dBm)</label>
+                <input type="number" step="any" name="pire_dbm_1" required>
+              </div>
+              <div class="form-group">
+                <label>Ancho de banda de señal (MHz)</label>
+                <input type="number" step="any" name="ancho_banda_senal_1" required>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="buttons-container">
+          <button type="button" class="btn-secundario" onclick="añadirSeñal()">Nueva Señal</button>
+          <button type="submit" class="btn-generar">Crea Gráfica</button>
+        </div>
+      </form>
+    </section>
+
+    <div class="loading" id="loading">
+      <div class="loading-spinner"></div>
+      <p>Procesando espectro...</p>
+    </div>
+
+    <section class="chart-container">
+      <h2 class="chart-title">Espectro de Potencia vs Frecuencia</h2>
+      <canvas id="espectroChart"></canvas>
+    </section>
+
+    <section class="results-container">
+      <h3 class="results-title">Parámetros de las Señales</h3>
+      <div id="tablaResultados">
+        <table class="results-table">
+          <thead>
+            <tr>
+              <th>Señal</th>
+              <th>Frecuencia (MHz)</th>
+              <th>PIRE (dBm)</th>
+              <th>Ancho de Banda (MHz)</th>
+              <th>Frecuencia -3dB Izq (MHz)</th>
+              <th>Frecuencia -3dB Der (MHz)</th>
+            </tr>
+          </thead>
+          <tbody id="tablaCuerpo">
+            <!-- Los datos se llenarán dinámicamente -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+<script>
+    const form = document.getElementById('paramsForm');
+    const ctx = document.getElementById('espectroChart').getContext('2d');
+    const loading = document.getElementById('loading');
+    const señalesContainer = document.getElementById('señales-container');
+    const tablaCuerpo = document.getElementById('tablaCuerpo');
+    let chart = null;
+    let contadorSeñales = 1;
+
+    const coloresSeñales = [
+      '#4a7b9d', '#9d8b55', '#c2b79b', '#8b7355', '#3a5f6f',
+      '#665e52', '#dad5b7', '#243757', '#e74c3c', '#27ae60'
+    ];
+
+function añadirSeñal() {
+  contadorSeñales++;
+  const nuevaSeñal = document.createElement('div');
+  nuevaSeñal.className = 'señal-item';
+  nuevaSeñal.setAttribute('data-señal-id', contadorSeñales);
+  
+  nuevaSeñal.innerHTML = `
+    <div class="señal-header">
+      <span class="señal-title">
+        <span class="signal-counter">${contadorSeñales}</span>
+        Señal
+      </span>
+      <button type="button" class="btn-eliminar" onclick="eliminarSeñal(${contadorSeñales})">Eliminar</button>
+    </div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Frecuencia central (MHz)</label>
+        <input type="number" step="any" name="frecuencia_senal_${contadorSeñales}" required>
+      </div>
+      <div class="form-group">
+        <label>PIRE (dBm)</label>
+        <input type="number" step="any" name="pire_dbm_${contadorSeñales}" required>
+      </div>
+      <div class="form-group">
+        <label>Ancho de banda de señal (MHz)</label>
+        <input type="number" step="any" name="ancho_banda_senal_${contadorSeñales}" required>
+      </div>
+    </div>
+  `;
+  
+  señalesContainer.appendChild(nuevaSeñal);
+}
+
+    function eliminarSeñal(id) {
+  if (contadorSeñales > 1) {
+    const señal = document.querySelector(`[data-señal-id="${id}"]`);
+    if (señal) {
+      señal.remove();
+      const señalesRestantes = document.querySelectorAll('.señal-item');
+      contadorSeñales = señalesRestantes.length;
+      
+      // ACTUALIZAR SOLO LOS CONTADORES, NO EL TEXTO
+      señalesRestantes.forEach((señal, index) => {
+        const counter = señal.querySelector('.signal-counter');
+        if (counter) counter.textContent = index + 1;
+        // Quitamos la actualización del texto para evitar la redundancia
+      });
+    }
+  } else {
+    alert('Debe haber al menos una señal');
+  }
+}
+
+    function obtenerDatosSeñales() {
+      const señales = [];
+      const elementosSeñales = document.querySelectorAll('.señal-item');
+      
+      elementosSeñales.forEach((elemento, index) => {
+        const id = elemento.getAttribute('data-señal-id');
+        
+        const frecuencia = parseFloat(elemento.querySelector(`input[name="frecuencia_senal_${id}"]`).value);
+        const pire = parseFloat(elemento.querySelector(`input[name="pire_dbm_${id}"]`).value);
+        const anchoBanda = parseFloat(elemento.querySelector(`input[name="ancho_banda_senal_${id}"]`).value);
+        
+        // Convertir a Hz para el backend (multiplicar por 1e6)
+        const frecuenciaHz = frecuencia * 1e6;
+        const anchoBandaHz = anchoBanda * 1e6;
+        
+        señales.push({
+          id: id,
+          frecuencia: frecuenciaHz,
+          pire: pire,
+          ancho_banda: anchoBandaHz,
+          color: coloresSeñales[index % coloresSeñales.length],
+          frecuenciaMHz: frecuencia,
+          anchoBandaMHz: anchoBanda
+        });
+      });
+      
+      return señales;
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      loading.style.display = 'block';
+
+      const señales = obtenerDatosSeñales();
+      
+      const anchoBandaRuidoMHz = parseFloat(form.querySelector('input[name="ancho_banda"]').value);
+      const anchoBandaRuidoHz = anchoBandaRuidoMHz * 1e6;
+      
+      const payload = {
+        temperatura: parseFloat(form.querySelector('input[name="temperatura"]').value),
+        ancho_banda: anchoBandaRuidoHz,
+        señales: señales
+      };
+
+      try {
+        const resp = await fetch('/api/espectro', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (!resp.ok) throw new Error('Error al generar espectro');
+        const data = await resp.json();
+        await procesarDatosEspectro(data, señales);
+
+      } catch (error) {
+        alert('Error: ' + error.message);
+        console.error('Error:', error);
+      } finally {
+        loading.style.display = 'none';
+      }
+    });
+
+    function encontrarIndiceMasCercano(freqs, frecuenciaObjetivo) {
+      let indiceMasCercano = 0;
+      let diferenciaMinima = Math.abs(freqs[0] - frecuenciaObjetivo);
+
+      for (let i = 1; i < freqs.length; i++) {
+        const diferencia = Math.abs(freqs[i] - frecuenciaObjetivo);
+        if (diferencia < diferenciaMinima) {
+          diferenciaMinima = diferencia;
+          indiceMasCercano = i;
+        }
+      }
+      return indiceMasCercano;
+    }
+
+    function combinarSeñales(data, señales) {
+      const freqs = data.freqs;
+      let señalCombinada = new Array(freqs.length).fill(-Infinity);
+      
+      señales.forEach(señal => {
+        const señalData = data[`señal_${señal.id}_dbm`] || [];
+        señalData.forEach((valor, index) => {
+          if (valor > señalCombinada[index]) {
+            señalCombinada[index] = valor;
+          }
+        });
+      });
+
+      return señalCombinada;
+    }
+
+    async function procesarDatosEspectro(data, señales) {
+      const freqs = data.freqs;
+      const ruidoDbm = data.ruido_total_dbm;
+
+      // Convertir frecuencias a MHz
+      const labels = freqs.map(f => (f * 1e-6).toFixed(2));
+
+      const señalCombinada = combinarSeñales(data, señales);
+      const ruidoPlano = new Array(freqs.length).fill(ruidoDbm);
+      const espectroFinal = señalCombinada.map((valorSeñal, index) => {
+        return Math.max(valorSeñal, ruidoPlano[index]);
+      });
+
+      if (chart) chart.destroy();
+
+      // Preparar datasets para el gráfico
+      const datasets = [{
+        label: 'Espectro Combinado',
+        data: espectroFinal,
+        borderWidth: 3,
+        borderColor: '#4a7b9d',
+        backgroundColor: 'transparent',
+        fill: false,
+        pointRadius: 0,
+        tension: 0.4
+      }];
+
+      // Añadir puntos PIRE para cada señal
+      señales.forEach((señal, index) => {
+        const frecuenciaMHz = señal.frecuenciaMHz;
+        const freqsMHz = freqs.map(f => f * 1e-6);
+        const indicePuntoMaximo = encontrarIndiceMasCercano(freqsMHz, frecuenciaMHz);
+        
+        const puntoPIRE = new Array(espectroFinal.length).fill(null);
+        puntoPIRE[indicePuntoMaximo] = señal.pire;
+
+        datasets.push({
+          label: `Señal ${señal.id} - PIRE`,
+          data: puntoPIRE,
+          borderWidth: 0,
+          pointBackgroundColor: señal.color,
+          pointBorderColor: '#ffffff',
+          pointBorderWidth: 3,
+          pointRadius: 8,
+          pointHoverRadius: 12,
+          showLine: false
+        });
+      });
+
+      chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: datasets
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: {
+            mode: 'index',
+            intersect: false,
+            axis: 'x'
+          },
+          scales: {
+            x: {
+              title: {
+                display: true,
+                text: 'Frecuencia (MHz)',
+                color: '#c2b79b',
+                font: { size: 14, weight: 'bold' }
+              },
+              grid: { color: 'rgba(194, 183, 155, 0.1)' },
+              ticks: {
+                maxTicksLimit: 12,
+                color: '#c2b79b'
+              }
+            },
+            y: {
+              title: {
+                display: true,
+                text: 'Potencia (dBm)',
+                color: '#c2b79b',
+                font: { size: 14, weight: 'bold' }
+              },
+              grid: { color: 'rgba(194, 183, 155, 0.1)' },
+              ticks: { color: '#c2b79b' }
+            }
+          },
+          plugins: {
+            legend: {
+              display: true,
+              position: 'top',
+              labels: {
+                color: '#c2b79b',
+                font: { size: 11 }
+              }
+            },
+            tooltip: {
+              backgroundColor: 'rgba(42, 50, 69, 0.95)',
+              borderColor: '#4a7b9d',
+              borderWidth: 2,
+              displayColors: true,
+              callbacks: {
+                label: function (context) {
+                  if (context.dataset.label.includes('PIRE')) {
+                    return `PIRE: ${context.parsed.y} dBm`;
+                  }
+                  return `Potencia: ${context.parsed.y.toFixed(2)} dBm`;
+                },
+                title: function (context) {
+                  const index = context[0].dataIndex;
+                  const frecuenciaActual = freqs[index] * 1e-6;
+                  return `Frecuencia: ${frecuenciaActual.toFixed(2)} MHz`;
+                }
+              }
+            }
+          }
+        }
+      });
+
+      // Actualizar tabla de resultados
+      actualizarTablaResultados(data, señales);
+    }
+
+    function actualizarTablaResultados(data, señales) {
+      tablaCuerpo.innerHTML = '';
+      
+      señales.forEach(señal => {
+        const fLeft = data[`señal_${señal.id}_f_left`];
+        const fRight = data[`señal_${señal.id}_f_right`];
+        
+        const fila = document.createElement('tr');
+        
+        // Convertir a MHz para mostrar en la tabla
+        const fLeftMHz = fLeft ? (fLeft * 1e-6).toFixed(2) : 'N/A';
+        const fRightMHz = fRight ? (fRight * 1e-6).toFixed(2) : 'N/A';
+        
+        fila.innerHTML = `
+          <td style="color: ${señal.color}; font-weight: bold;">${señal.id}</td>
+          <td>${señal.frecuenciaMHz}</td>
+          <td>${señal.pire}</td>
+          <td>${señal.anchoBandaMHz}</td>
+          <td>${fLeftMHz}</td>
+          <td>${fRightMHz}</td>
+        `;
+        
+        tablaCuerpo.appendChild(fila);
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      console.log('Analizador de Espectro RF - Listo!');
+    });
+  </script>
+</body>
+</html>
